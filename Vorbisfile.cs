@@ -177,6 +177,15 @@ public static class Vorbisfile
 		public IntPtr codec_setup; // Refers to a void*
 	}
 
+	[StructLayout(LayoutKind.Sequential)]
+	public struct vorbis_comment
+	{
+		public IntPtr user_comments;
+		public IntPtr comment_lengths;
+		public int comments;
+		public IntPtr vendor;
+	}
+
 	#endregion
 
 	#region Vorbisfile Implementation
@@ -235,7 +244,7 @@ public static class Vorbisfile
 	public static extern int ov_fopen(
 		[In()] [MarshalAs(UnmanagedType.LPStr)]
 			string path,
-		ref OggVorbis_File vf
+		out OggVorbis_File vf
 	);
 
 	[DllImport(nativeLibName, EntryPoint = "ov_info", CallingConvention = CallingConvention.Cdecl)]
@@ -255,6 +264,26 @@ public static class Vorbisfile
 		return info;
 	}
 
+	[DllImport(nativeLibName, EntryPoint = "ov_comment", CallingConvention = CallingConvention.Cdecl)]
+	private static extern IntPtr INTERNAL_ov_comment(
+		ref OggVorbis_File vf,
+		int link
+	);
+	public static vorbis_comment ov_comment(
+		ref OggVorbis_File vf,
+		int link
+	) {
+		IntPtr result = INTERNAL_ov_comment(ref vf, link);
+		vorbis_comment comment = (vorbis_comment) Marshal.PtrToStructure(
+			result,
+			typeof(vorbis_comment)
+		);
+		return comment;
+	}
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern double ov_time_total(ref OggVorbis_File vf, int i);
+
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern long ov_read(
 		ref OggVorbis_File vf,
@@ -263,7 +292,7 @@ public static class Vorbisfile
 		int bigendianp,
 		int word,
 		int sgned,
-		ref int current_section
+		out int current_section
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
