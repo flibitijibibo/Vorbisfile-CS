@@ -180,10 +180,10 @@ public static class Vorbisfile
 	[StructLayout(LayoutKind.Sequential)]
 	public struct vorbis_comment
 	{
-		public IntPtr user_comments;
-		public IntPtr comment_lengths;
+		public IntPtr user_comments;	// Refers to a char**
+		public IntPtr comment_lengths;	// Refers to an int*
 		public int comments;
-		public IntPtr vendor;
+		public IntPtr vendor;		// Refers to a char*
 	}
 
 	#endregion
