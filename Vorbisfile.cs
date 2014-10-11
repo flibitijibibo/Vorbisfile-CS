@@ -35,7 +35,7 @@ public static class Vorbisfile
 {
 	#region Native Library Name
 
-	private const string nativeLibName = "vorbisfile.dll";
+	private const string nativeLibName = "libvorbisfile.dll";
 
 	#endregion
 
