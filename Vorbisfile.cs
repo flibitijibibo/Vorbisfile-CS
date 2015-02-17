@@ -39,6 +39,18 @@ public static class Vorbisfile
 
 	#endregion
 
+	#region malloc/free Entry Points
+
+	// Yes, we're seriously using these. -flibit
+
+	[DllImport("msvcrt.dll", CallingConvention = CallingConvention.Cdecl)]
+	private static extern IntPtr malloc(IntPtr size);
+
+	[DllImport("msvcrt.dll", CallingConvention = CallingConvention.Cdecl)]
+	private static extern void free(IntPtr memblock);
+
+	#endregion
+
 	#region Vorbis Structures
 
 	[StructLayout(LayoutKind.Sequential)]
@@ -68,7 +80,7 @@ public static class Vorbisfile
 	#region Vorbisfile Implementation
 
 	/* Notice that we did not implement an OggVorbis_File struct, but are
-	 * instead using a byte[] array.
+	 * instead using a pointer natively malloc'd.
 	 *
 	 * C# Interop for Vorbisfile structs is basically impossible to do, so
 	 * we just alloc what _should_ be the full size of the structure for
@@ -84,9 +96,9 @@ public static class Vorbisfile
 	private static extern int INTERNAL_ov_fopen(
 		[In()] [MarshalAs(UnmanagedType.LPStr)]
 			string path,
-		byte[] vf
+		IntPtr vf
 	);
-	public static int ov_fopen(string path, out byte[] vf)
+	public static int ov_fopen(string path, out IntPtr vf)
 	{
 		// Do not attempt to understand these numbers at all costs!
 		const int win32Size = 720;
@@ -97,17 +109,17 @@ public static class Vorbisfile
 		if (platform == PlatformID.Win32NT)
 		{
 			// Assuming 32-bit, because why would Windows want to move to 64?!
-			vf = new byte[win32Size];
+			vf = malloc((IntPtr) win32Size);
 		}
 		else if (platform == PlatformID.Unix)
 		{
 			if (IntPtr.Size == 8)
 			{
-				vf = new byte[unix64Size];
+				vf = malloc((IntPtr) unix64Size);
 			}
 			else if (IntPtr.Size == 4)
 			{
-				vf = new byte[unix32Size];
+				vf = malloc((IntPtr) unix32Size);
 			}
 			else
 			{
@@ -123,11 +135,11 @@ public static class Vorbisfile
 
 	[DllImport(nativeLibName, EntryPoint = "ov_info", CallingConvention = CallingConvention.Cdecl)]
 	private static extern IntPtr INTERNAL_ov_info(
-		byte[] vf,
+		IntPtr vf,
 		int link
 	);
 	public static vorbis_info ov_info(
-		byte[] vf,
+		IntPtr vf,
 		int link
 	) {
 		IntPtr result = INTERNAL_ov_info(vf, link);
@@ -140,11 +152,11 @@ public static class Vorbisfile
 
 	[DllImport(nativeLibName, EntryPoint = "ov_comment", CallingConvention = CallingConvention.Cdecl)]
 	private static extern IntPtr INTERNAL_ov_comment(
-		byte[] vf,
+		IntPtr vf,
 		int link
 	);
 	public static vorbis_comment ov_comment(
-		byte[] vf,
+		IntPtr vf,
 		int link
 	) {
 		IntPtr result = INTERNAL_ov_comment(vf, link);
@@ -156,11 +168,11 @@ public static class Vorbisfile
 	}
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-	public static extern double ov_time_total(byte[] vf, int i);
+	public static extern double ov_time_total(IntPtr vf, int i);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern long ov_read(
-		byte[] vf,
+		IntPtr vf,
 		byte[] buffer,
 		int length,
 		int bigendianp,
@@ -170,11 +182,12 @@ public static class Vorbisfile
 	);
 
 	[DllImport(nativeLibName, EntryPoint = "ov_clear", CallingConvention = CallingConvention.Cdecl)]
-	private static extern int INTERNAL_ov_clear(byte[] vf);
-	public static int ov_clear(ref byte[] vf)
+	private static extern int INTERNAL_ov_clear(IntPtr vf);
+	public static int ov_clear(ref IntPtr vf)
 	{
 		int result = INTERNAL_ov_clear(vf);
-		vf = null;
+		free(vf);
+		vf = IntPtr.Zero;
 		return result;
 	}
 
