@@ -182,6 +182,17 @@ public static class Vorbisfile
 	);
 
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+	public static extern long ov_read(
+		IntPtr vf,
+		IntPtr buffer,
+		int length,
+		int bigendianp,
+		int word,
+		int sgned,
+		out int current_section
+	);
+
+	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern int ov_time_seek(IntPtr vf, double s);
 
 	[DllImport(nativeLibName, EntryPoint = "ov_clear", CallingConvention = CallingConvention.Cdecl)]
