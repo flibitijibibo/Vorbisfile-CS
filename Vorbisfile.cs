@@ -51,6 +51,48 @@ public static class Vorbisfile
 
 	#endregion
 
+	#region C stdio Macros
+
+	// Used by ov_callbacks, seek_func
+	public enum SeekWhence : int
+	{
+		SEEK_SET = 0,
+		SEEK_CUR = 1,
+		SEEK_END = 2
+	}
+
+	#endregion
+
+	#region Vorbis Delegates
+
+	/* IntPtr refers to a size_t */
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate IntPtr read_func(
+		IntPtr ptr,		// Refers to a void*
+		IntPtr size,		// Refers to a size_t
+		IntPtr nmemb,		// Refers to a size_t
+		IntPtr datasource	// Refers to a void*
+	);
+
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate int seek_func(
+		IntPtr datasource,	// Refers to a void*
+		long offset,
+		SeekWhence whence
+	);
+
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate int close_func(
+		IntPtr datasource	// Refers to a void*
+	);
+
+	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+	public delegate long tell_func(
+		IntPtr datasource	// Refers to a void*
+	);
+
+	#endregion
+
 	#region Vorbis Structures
 
 	[StructLayout(LayoutKind.Sequential)]
@@ -75,22 +117,18 @@ public static class Vorbisfile
 		public IntPtr vendor;		// Refers to a char*
 	}
 
+	[StructLayout(LayoutKind.Sequential)]
+	public struct ov_callbacks
+	{
+		public read_func read_func;
+		public seek_func seek_func;
+		public close_func close_func;
+		public tell_func tell_func;
+	}
+
 	#endregion
 
 	#region Vorbisfile Implementation
-
-	/* Notice that we did not implement an OggVorbis_File struct, but are
-	 * instead using a pointer natively malloc'd.
-	 *
-	 * C# Interop for Vorbisfile structs is basically impossible to do, so
-	 * we just alloc what _should_ be the full size of the structure for
-	 * the OS and architecture, then pass that around as if that's a real
-	 * struct. The size is just what you get from sizeof(OggVorbis_File).
-	 *
-	 * Don't get mad at me, get mad at C#.
-	 *
-	 * -flibit
-	 */
 
 	[DllImport(nativeLibName, EntryPoint = "ov_fopen", CallingConvention = CallingConvention.Cdecl)]
 	private static extern int INTERNAL_ov_fopen(
@@ -100,37 +138,33 @@ public static class Vorbisfile
 	);
 	public static int ov_fopen(string path, out IntPtr vf)
 	{
-		// Do not attempt to understand these numbers at all costs!
-		const int win32Size = 720;
-		const int unix32Size = 704;
-		const int unix64Size = 944;
-
-		PlatformID platform = Environment.OSVersion.Platform;
-		if (platform == PlatformID.Win32NT)
-		{
-			// Assuming 32-bit, because why would Windows want to move to 64?!
-			vf = malloc((IntPtr) win32Size);
-		}
-		else if (platform == PlatformID.Unix)
-		{
-			if (IntPtr.Size == 8)
-			{
-				vf = malloc((IntPtr) unix64Size);
-			}
-			else if (IntPtr.Size == 4)
-			{
-				vf = malloc((IntPtr) unix32Size);
-			}
-			else
-			{
-				throw new NotSupportedException("Unhandled architecture!");
-			}
-		}
-		else
-		{
-			throw new NotSupportedException("Unhandled platform!");
-		}
+		vf = AllocVorbisFile();
 		return INTERNAL_ov_fopen(path, vf);
+	}
+
+	[DllImport(nativeLibName, EntryPoint = "ov_open_callbacks", CallingConvention = CallingConvention.Cdecl)]
+	private static extern int INTERNAL_ov_open_callbacks(
+		IntPtr datasource,
+		IntPtr vf,
+		IntPtr initial,
+		IntPtr ibytes,
+		ov_callbacks callbacks
+	);
+	public static int INTERNAL_ov_open_callbacks(
+		IntPtr datasource,	// Refers to a void*
+		out IntPtr vf,
+		IntPtr initial,		// Refers to a char*
+		IntPtr ibytes,		// Refers to a long, ignoring Win64!
+		ov_callbacks callbacks
+	) {
+		vf = AllocVorbisFile();
+		return INTERNAL_ov_open_callbacks(
+			datasource,
+			vf,
+			initial,
+			ibytes,
+			callbacks
+		);
 	}
 
 	[DllImport(nativeLibName, EntryPoint = "ov_info", CallingConvention = CallingConvention.Cdecl)]
@@ -203,6 +237,51 @@ public static class Vorbisfile
 		free(vf);
 		vf = IntPtr.Zero;
 		return result;
+	}
+
+	#endregion
+
+	#region OggVorbis_File Allocator
+
+	/* Notice that we did not implement an OggVorbis_File struct, but are
+	 * instead using a pointer natively malloc'd.
+	 *
+	 * C# Interop for Vorbisfile structs is basically impossible to do, so
+	 * we just alloc what _should_ be the full size of the structure for
+	 * the OS and architecture, then pass that around as if that's a real
+	 * struct. The size is just what you get from sizeof(OggVorbis_File).
+	 *
+	 * Don't get mad at me, get mad at C#.
+	 *
+	 * -flibit
+	 */
+
+	private static IntPtr AllocVorbisFile()
+	{
+		// Do not attempt to understand these numbers at all costs!
+		const int win32Size = 720;
+		const int unix32Size = 704;
+		const int unix64Size = 944;
+
+		PlatformID platform = Environment.OSVersion.Platform;
+		if (platform == PlatformID.Win32NT)
+		{
+			// Assuming 32-bit, because why would Windows want to move to 64?!
+			return malloc((IntPtr) win32Size);
+		}
+		if (platform == PlatformID.Unix)
+		{
+			if (IntPtr.Size == 8)
+			{
+				return malloc((IntPtr) unix64Size);
+			}
+			if (IntPtr.Size == 4)
+			{
+				return malloc((IntPtr) unix32Size);
+			}
+			throw new NotSupportedException("Unhandled architecture!");
+		}
+		throw new NotSupportedException("Unhandled platform!");
 	}
 
 	#endregion
