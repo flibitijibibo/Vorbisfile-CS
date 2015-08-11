@@ -150,7 +150,7 @@ public static class Vorbisfile
 		IntPtr ibytes,
 		ov_callbacks callbacks
 	);
-	public static int INTERNAL_ov_open_callbacks(
+	public static int ov_open_callbacks(
 		IntPtr datasource,	// Refers to a void*
 		out IntPtr vf,
 		IntPtr initial,		// Refers to a char*
