@@ -259,29 +259,28 @@ public static class Vorbisfile
 	private static IntPtr AllocVorbisFile()
 	{
 		// Do not attempt to understand these numbers at all costs!
-		const int win32Size = 720;
-		const int unix32Size = 704;
-		const int unix64Size = 944;
+		const int size32 = 720;
+		const int size64Unix = 944;
 
 		PlatformID platform = Environment.OSVersion.Platform;
-		if (platform == PlatformID.Win32NT)
+		if (IntPtr.Size == 4)
 		{
-			// Assuming 32-bit, because why would Windows want to move to 64?!
-			return malloc((IntPtr) win32Size);
+			/* Technically this could be as low as 704 bytes, but
+			 * some 32-bit architectures may be higher even on Unix
+			 * targets (like ARMv7).
+			 * -flibit
+			 */
+			return malloc((IntPtr) size32);
 		}
-		if (platform == PlatformID.Unix)
+		if (IntPtr.Size == 8)
 		{
-			if (IntPtr.Size == 8)
+			if (platform == PlatformID.Unix)
 			{
-				return malloc((IntPtr) unix64Size);
+				return malloc((IntPtr) size64Unix);
 			}
-			if (IntPtr.Size == 4)
-			{
-				return malloc((IntPtr) unix32Size);
-			}
-			throw new NotSupportedException("Unhandled architecture!");
+			throw new NotSupportedException("Unhandled platform!");
 		}
-		throw new NotSupportedException("Unhandled platform!");
+		throw new NotSupportedException("Unhandled architecture!");
 	}
 
 	#endregion
