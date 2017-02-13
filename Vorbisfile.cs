@@ -77,7 +77,7 @@ public static class Vorbisfile
 	[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 	public delegate int seek_func(
 		IntPtr datasource,	// Refers to a void*
-		IntPtr offset, // Refers to a long, ignoring Win64!
+		long offset,		// Refers to an ogg_int64_t
 		SeekWhence whence
 	);
 
