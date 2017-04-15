@@ -264,6 +264,7 @@ public static class Vorbisfile
 		// Do not attempt to understand these numbers at all costs!
 		const int size32 = 720;
 		const int size64Unix = 944;
+		const int size64Windows = 840;
 
 		PlatformID platform = Environment.OSVersion.Platform;
 		if (IntPtr.Size == 4)
@@ -280,6 +281,10 @@ public static class Vorbisfile
 			if (platform == PlatformID.Unix)
 			{
 				return malloc((IntPtr) size64Unix);
+			}
+			else if (platform == PlatformID.Win32NT)
+			{
+				return malloc((IntPtr) size64Windows);
 			}
 			throw new NotSupportedException("Unhandled platform!");
 		}
