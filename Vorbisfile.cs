@@ -178,6 +178,7 @@ public static class Vorbisfile
 		int link
 	) {
 		IntPtr result = INTERNAL_ov_info(vf, link);
+		if (result == IntPtr.Zero) throw new InvalidOperationException("Specified bitstream does not exist or the file has been initialized improperly.");
 		vorbis_info info = (vorbis_info) Marshal.PtrToStructure(
 			result,
 			typeof(vorbis_info)
@@ -195,6 +196,7 @@ public static class Vorbisfile
 		int link
 	) {
 		IntPtr result = INTERNAL_ov_comment(vf, link);
+		if (result == IntPtr.Zero) throw new InvalidOperationException("Specified bitstream does not exist or the file has been initialized improperly.");
 		vorbis_comment comment = (vorbis_comment) Marshal.PtrToStructure(
 			result,
 			typeof(vorbis_comment)
