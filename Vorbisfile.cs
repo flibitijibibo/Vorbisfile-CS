@@ -262,6 +262,14 @@ public static class Vorbisfile
 	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
 	public static extern IntPtr ov_seekable(IntPtr vf);
 
+    	/* IntPtr refers to a long, ignoring Win64! */
+   	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+    	public static extern int ov_raw_seek(IntPtr vf, IntPtr pos);
+
+    	/* IntPtr refers to a long, ignoring Win64! */
+    	[DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+   	public static extern IntPtr ov_raw_tell(IntPtr vf);
+	
 	#endregion
 
 	#region OggVorbis_File Allocator
