@@ -3,7 +3,7 @@
 
 build: clean
 	mkdir bin
-	cp Vorbisfile-CS.dll.config bin
+	cp app.config bin/Vorbisfile-CS.dll.config
 	dmcs /unsafe -debug -out:bin/Vorbisfile-CS.dll -target:library Vorbisfile.cs
 
 clean:
